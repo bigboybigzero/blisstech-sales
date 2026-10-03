@@ -1,0 +1,815 @@
+<!doctype html>
+<html lang="th">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ยอดขายรายวัน</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@400;500;600&family=Bai+Jamjuree:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:30 41 59; --muted:92 100 120; --faint:150 156 172;
+  --line:26 32 50; --surface:249 250 252; --card:255 255 255; --accent:71 85 105;
+  --sh-sm:0 1px 2px rgb(26 32 50/.04),0 1px 1px rgb(26 32 50/.03);
+  --sh-md:0 4px 14px -4px rgb(26 32 50/.09),0 2px 6px -2px rgb(26 32 50/.06);
+  --good:#0f766e; --bad:#b3261e;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Anuphan",system-ui,sans-serif;color:rgb(var(--ink));background:rgb(var(--surface));line-height:1.55;-webkit-font-smoothing:antialiased}
+.disp{font-family:"Bai Jamjuree",sans-serif;letter-spacing:-.01em}
+.num{font-variant-numeric:tabular-nums}
+button,input,textarea,select{font-family:inherit}
+.hidden{display:none!important}
+svg.i{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+/* auth */
+.auth{min-height:100vh;display:grid;place-items:center;padding:24px;background-image:radial-gradient(1000px 400px at 85% -10%,rgb(37 99 235/.06),transparent 60%)}
+.auth-card{width:100%;max-width:400px;background:rgb(var(--card));border:1px solid rgb(var(--line)/.1);border-radius:18px;box-shadow:var(--sh-md);padding:30px}
+.brand{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.mark{width:38px;height:38px;border:1.5px solid rgb(var(--ink));border-radius:11px;display:grid;place-items:center}
+label{display:block;font-size:12.5px;color:rgb(var(--muted));margin:12px 0 4px}
+input,select,textarea{width:100%;border:1px solid rgb(var(--line)/.16);border-radius:10px;padding:10px 12px;font-size:14px;background:#fff;color:rgb(var(--ink))}
+input:focus,select:focus{outline:none;border-color:rgb(var(--accent));box-shadow:0 0 0 3px rgb(37 99 235/.12)}
+input.pin{font-size:24px;letter-spacing:.5em;text-align:center;font-family:"Bai Jamjuree"}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid rgb(var(--line)/.16);background:rgb(var(--card));color:rgb(var(--ink));padding:10px 16px;border-radius:11px;font-size:14px;font-weight:500;cursor:pointer;box-shadow:var(--sh-sm);transition:.15s;white-space:nowrap}
+.btn:hover{border-color:rgb(var(--ink)/.3)}
+.btn.dark{background:rgb(var(--ink));color:#fff;border-color:rgb(var(--ink))}
+.btn.dark:hover{background:rgb(var(--accent))}
+.btn:disabled{opacity:.45;cursor:default}
+.btn-primary{display:flex;align-items:center;justify-content:center;padding:11px 16px;border-radius:11px;font-size:14px;font-weight:500;cursor:pointer;background:rgb(var(--ink));color:#fff;border:1px solid rgb(var(--ink));width:100%;margin-top:18px}
+.btn-primary:hover{background:rgb(var(--accent))}
+.err{color:#b1453a;font-size:13px;margin-top:12px;min-height:18px}
+.muted{color:rgb(var(--muted))}.small{font-size:12px}
+.demo{margin-top:18px;font-size:12.5px;color:rgb(var(--muted));background:rgb(var(--line)/.04);border:1px dashed rgb(var(--line)/.18);border-radius:10px;padding:10px 13px}
+.demo b{color:rgb(var(--ink));font-family:"Bai Jamjuree"}
+
+/* shell */
+.top{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:12px;padding:0 20px;height:60px;background:rgb(var(--card)/.9);backdrop-filter:blur(8px);border-bottom:1px solid rgb(var(--line)/.1)}
+.top .sp{margin-left:auto}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:rgb(var(--muted));border:1px solid rgb(var(--line)/.14);padding:5px 11px;border-radius:9999px;background:rgb(var(--card));white-space:nowrap}
+.icon-btn{width:38px;height:38px;border:1px solid rgb(var(--line)/.14);border-radius:10px;background:rgb(var(--card));cursor:pointer;display:grid;place-items:center;color:rgb(var(--ink))}
+.opshell{display:grid;grid-template-columns:228px 1fr;align-items:start;width:100%}
+.opnav{position:sticky;top:60px;align-self:start;padding:18px 12px;display:flex;flex-direction:column;gap:4px;border-right:1px solid rgb(var(--line)/.1);height:calc(100vh - 60px);overflow-y:auto}
+.opnav-item{display:flex;align-items:center;gap:11px;width:100%;text-align:left;border:none;background:transparent;padding:10px 12px;border-radius:11px;cursor:pointer;color:rgb(var(--muted));transition:.12s}
+.opnav-item span{display:flex;flex-direction:column;line-height:1.25;min-width:0}
+.opnav-item b{font-size:14px;font-weight:600;color:rgb(var(--ink))}
+.opnav-item small{font-size:11px;color:rgb(var(--faint))}
+.opnav-item:hover{background:rgb(var(--line)/.05)}
+.opnav-item.on{background:rgb(var(--ink));color:#fff}
+.opnav-item.on b,.opnav-item.on small{color:#fff}
+.opnav-item.on small{opacity:.7}
+.opmain{padding:24px 36px 60px;min-width:0;max-width:1240px}
+.pagehead{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.pagehead h1{font-family:"Bai Jamjuree";font-weight:600;font-size:22px}
+.pagehead .sp{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.pagehead select,.pagehead input{width:auto}
+.back{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:rgb(var(--muted));background:none;border:none;cursor:pointer;padding:4px 0;margin-bottom:8px}
+.back:hover{color:rgb(var(--ink))}
+.hint{font-size:12.5px;color:rgb(var(--muted));background:rgb(var(--line)/.04);border:1px solid rgb(var(--line)/.08);border-radius:10px;padding:9px 13px;margin-bottom:14px}
+.sec-h{font-family:"Bai Jamjuree";font-weight:600;font-size:16px;margin:26px 0 10px;display:flex;align-items:baseline;gap:10px}
+.sec-h small{font-family:"Anuphan";font-weight:400;font-size:12.5px;color:rgb(var(--muted))}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.stat{background:rgb(var(--card));border:1px solid rgb(var(--line)/.1);border-radius:14px;padding:15px;box-shadow:var(--sh-sm)}
+.stat .t{font-size:12px;color:rgb(var(--muted))}
+.stat .v{font-family:"Bai Jamjuree";font-weight:700;font-size:23px;margin-top:4px;line-height:1.2}
+.stat .s{font-size:12px;color:rgb(var(--muted));margin-top:4px}
+.card{background:rgb(var(--card));border:1px solid rgb(var(--line)/.1);border-radius:14px;box-shadow:var(--sh-sm);padding:16px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.zone{font-size:11px;font-weight:600;padding:2px 9px;border-radius:9999px;border:1px solid;white-space:nowrap}
+.zone.safe{color:#0f766e;border-color:rgb(16 185 129/.38);background:rgb(16 185 129/.06)}
+.zone.warn{color:#92660b;border-color:rgb(234 179 8/.4);background:rgb(234 179 8/.07)}
+.zone.gray{color:rgb(var(--muted));border-color:rgb(var(--line)/.2);background:rgb(var(--line)/.04)}
+.zone.danger{color:#b3261e;border-color:rgb(220 38 38/.4);background:rgb(220 38 38/.07)}
+.up{color:var(--good)}.down{color:var(--bad)}
+
+table.tbl{width:100%;border-collapse:collapse;font-size:13.5px;background:rgb(var(--card));border:1px solid rgb(var(--line)/.1);border-radius:14px;overflow:hidden}
+table.tbl th{text-align:left;font-size:11.5px;letter-spacing:.03em;color:rgb(var(--muted));font-weight:600;padding:11px 13px;border-bottom:1px solid rgb(var(--line)/.1);white-space:nowrap}
+table.tbl td{padding:11px 13px;border-bottom:1px solid rgb(var(--line)/.06)}
+table.tbl tr:last-child td{border-bottom:none}
+table.tbl .r{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+table.tbl tfoot td{font-weight:600;border-top:1px solid rgb(var(--line)/.12);background:rgb(var(--line)/.02)}
+table.tbl tr.go{cursor:pointer}
+table.tbl tr.go:hover td{background:rgb(var(--line)/.035)}
+.share{display:flex;align-items:center;gap:8px;justify-content:flex-end}
+.share i{display:block;height:6px;border-radius:3px;background:#475569;min-width:2px}
+.mini{font-size:12px;padding:5px 11px;border-radius:8px;border:1px solid rgb(var(--line)/.16);background:#fff;cursor:pointer;color:rgb(var(--ink));white-space:nowrap}
+.mini:hover{border-color:rgb(var(--ink)/.3)}
+.mini.danger{color:#b3261e}
+
+/* chart */
+.chart{position:relative}
+.chart svg{display:block;width:100%;height:auto}
+.chart .tt{position:absolute;pointer-events:none;background:#fff;border:1px solid rgb(var(--line)/.14);border-radius:10px;box-shadow:var(--sh-md);padding:9px 12px;font-size:12.5px;min-width:190px;z-index:5;transition:opacity .1s}
+.tt .h{font-weight:600;margin-bottom:4px}
+.tt .row{display:flex;justify-content:space-between;gap:14px}
+.tt .row span:last-child{font-variant-numeric:tabular-nums}
+.tt .tot{border-top:1px solid rgb(var(--line)/.1);margin-top:4px;padding-top:4px;font-weight:600}
+.legend{display:flex;gap:16px;font-size:12px;color:rgb(var(--muted));margin-bottom:6px;flex-wrap:wrap}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{display:inline-block;width:12px;height:10px;border-radius:2px;background:#475569}
+.legend i.ln{height:0;border-top:2px dashed #b3261e;background:none}
+
+/* entry form */
+.entry{display:flex;flex-direction:column;gap:10px}
+.prow{display:grid;grid-template-columns:180px 1fr 1fr 1fr;gap:10px;align-items:end;background:#fff;border:1px solid rgb(var(--line)/.1);border-radius:12px;padding:12px 14px;box-shadow:var(--sh-sm)}
+.prow.noads{grid-template-columns:180px 1fr}
+.prow .pn b{display:block;font-size:14.5px}
+.prow .pn small{font-size:11.5px;color:rgb(var(--faint))}
+.prow label{margin:0 0 4px}
+.prow input{text-align:right;font-variant-numeric:tabular-nums;font-size:16px}
+.totbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;position:sticky;bottom:0;background:rgb(var(--surface)/.95);backdrop-filter:blur(6px);padding:12px 0;border-top:1px solid rgb(var(--line)/.1);margin-top:6px}
+.totbar .sp{margin-left:auto}
+.formrow{display:grid;grid-template-columns:160px 200px 160px 1fr auto;gap:10px;align-items:end}
+.formrow label{margin:0 0 4px}
+.switch{display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer}
+.switch input{width:18px;height:18px;accent-color:rgb(var(--ink))}
+.tierbar{position:relative;height:10px;border-radius:5px;background:rgb(var(--line)/.07);margin:12px 0 6px;overflow:hidden}
+.tierbar i{position:absolute;left:0;top:0;bottom:0;background:#475569;border-radius:5px}
+.kv{display:flex;justify-content:space-between;padding:7px 0;border-top:1px solid rgb(var(--line)/.06);font-size:13.5px}
+.kv:first-of-type{border-top:none}
+.kv b{font-family:"Bai Jamjuree";font-weight:600;font-variant-numeric:tabular-nums}
+.empty{font-size:13px;color:rgb(var(--faint));text-align:center;padding:18px}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(12px);background:rgb(var(--ink));color:#fff;font-size:14px;padding:11px 18px;border-radius:12px;opacity:0;pointer-events:none;transition:.25s;z-index:90;box-shadow:0 10px 30px rgb(26 32 50/.22)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+@media(max-width:900px){.grid2{grid-template-columns:1fr}.formrow{grid-template-columns:1fr 1fr}.formrow .wide{grid-column:1/-1}}
+@media(max-width:760px){
+  .top{padding:0 14px}
+  .top .who-role{display:none}
+  .opshell{grid-template-columns:1fr}
+  .opnav{position:static;flex-direction:row;flex-wrap:wrap;height:auto;border-right:none;border-bottom:1px solid rgb(var(--line)/.1);padding:10px}
+  .opnav-item{width:auto;flex:1;min-width:100px;justify-content:center;padding:9px 8px}
+  .opnav-item small{display:none}
+  .opnav-item svg{display:none}
+  .opmain{padding:18px 16px 60px}
+  table.tbl{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:nowrap}
+  .tbl th,.tbl td{padding-left:9px;padding-right:9px}
+  .prow,.prow.noads{grid-template-columns:1fr 1fr}
+  .prow .pn{grid-column:1/-1}
+  .prow.noads input{grid-column:1/-1}
+  .prow.noads > div:last-child{grid-column:1/-1}
+  .cards{grid-template-columns:1fr 1fr}
+  .stat .v{font-size:19px}
+}
+</style>
+<style>
+.loading{display:flex;align-items:center;gap:10px;color:rgb(var(--muted));font-size:14px;padding:40px 0;justify-content:center}
+.spin{width:18px;height:18px;border:2px solid rgb(var(--line)/.15);border-top-color:rgb(var(--ink));border-radius:50%;animation:sp .8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.btn.busy,.btn-primary.busy{opacity:.6;pointer-events:none}
+a.btn{text-decoration:none}
+</style>
+</head>
+<body>
+
+<!-- ล็อกอิน: เลือกชื่อ + รหัส -->
+<div id="login" class="auth">
+  <div class="auth-card">
+    <div class="brand">
+      <div class="mark"><svg class="i" viewBox="0 0 24 24"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg></div>
+      <div><div class="disp" style="font-weight:600;font-size:18px">ยอดขายรายวัน</div><div class="small muted">BLISSTECH</div></div>
+    </div>
+    <form id="loginForm" autocomplete="off">
+      <label for="who">ชื่อผู้ใช้</label>
+      <select id="who"><option value="">กำลังโหลด…</option></select>
+      <label for="pin">รหัสเข้าใช้งาน</label>
+      <input id="pin" class="pin" type="password" inputmode="numeric" maxlength="6">
+      <button class="btn-primary" type="submit" id="loginBtn">เข้าใช้งาน</button>
+      <div class="err" id="loginErr"></div>
+    </form>
+  </div>
+</div>
+
+<!-- แอป -->
+<div id="app" class="hidden">
+  <header class="top">
+    <div class="mark" style="width:32px;height:32px;border-radius:9px"><svg class="i" viewBox="0 0 24 24"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg></div>
+    <div class="disp" style="font-weight:600">ยอดขายรายวัน</div>
+    <div class="sp"></div>
+    <span class="chip"><span id="whoName"></span><span class="who-role" id="whoRole"></span></span>
+    <button class="icon-btn" id="logout" title="ออกจากระบบ"><svg class="i" viewBox="0 0 24 24"><path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10"/></svg></button>
+  </header>
+  <div class="opshell">
+    <nav class="opnav" id="nav"></nav>
+    <main class="opmain" id="main"></main>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const ICON = {
+  dash:'<path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/>',
+  day:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+  edit:'<path d="M4 20h4L19 9l-4-4L4 16v4zM13 7l4 4"/>',
+  exp:'<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h4"/>',
+  set:'<circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.6-2-3.4-2.4 1a7 7 0 0 0-2-1.2L14 3h-4l-.5 2.6a7 7 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.6A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 2 1.2L10 21h4l.5-2.6a7 7 0 0 0 2-1.2l2.4 1 2-3.4-2-1.6c.1-.4.1-.8.1-1.2z"/>',
+  back:'<path d="M15 6l-6 6 6 6"/>',
+};
+const TOKEN_KEY = 'dailySales.token';
+
+/* ─────────────────────────── เรียกฝั่ง Google ─────────────────────────── */
+let token = null, me = null, TODAY = null;
+let MD = null;   // ข้อมูลเดือนที่เปิดอยู่ (เจ้าของ)
+let view = {page:null};
+/* เปิดผ่าน Google (google.script.run) หรือผ่าน GitHub Pages (ยิง API ไปที่เว็บแอปเดียวกัน) */
+const API_URL = 'https://script.google.com/macros/s/AKfycbzvwgYxWkWOwOZr163wN-lo9iSkvsE_-kCiaYIkX6VE6APNaOJerOUB6gIvRPFhbP9smw/exec';
+const IN_GAS = typeof google !== 'undefined' && google.script && google.script.run;
+function call(fn, ...args) {
+  if (IN_GAS) return new Promise((res, rej) => google.script.run
+    .withSuccessHandler(res)
+    .withFailureHandler(e => rej(new Error(e && e.message || String(e))))[fn](...args));
+  return callApi(fn, args);
+}
+/* Google ส่งคำตอบกลับพลาดเป็นบางครั้ง (หน้า "ไม่สามารถเปิดไฟล์ได้") → ลองใหม่อัตโนมัติ
+   ทุกคำสั่งฝั่ง Google ทำซ้ำได้โดยไม่บันทึกซ้ำ */
+async function callApi(fn, args) {
+  const body = JSON.stringify({fn, args});
+  let err = null;
+  for (let i = 0; i < 5; i++) {
+    if (i) await new Promise(r => setTimeout(r, 300 * i));
+    let res;
+    try { res = await fetch(API_URL, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body, redirect:'follow'}); }
+    catch (e) { err = new Error('เชื่อมต่อไม่ได้ ตรวจสอบอินเทอร์เน็ตแล้วลองใหม่'); continue; }
+    let j;
+    try { j = await res.json(); } catch (e) { err = new Error('ระบบ Google ไม่ตอบ ลองกดใหม่อีกครั้ง'); continue; }
+    if (!j.ok) throw new Error(j.error);
+    return j.result;
+  }
+  throw err;
+}
+const newId = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+/* เรียกแบบต้องล็อกอิน: token หมดอายุ → กลับหน้าล็อกอิน */
+async function api(fn, ...args) {
+  try { return await call(fn, token, ...args); }
+  catch (e) {
+    if (/SESSION_EXPIRED/.test(e.message)) { toast('หมดเวลาใช้งาน กรุณาเข้าใหม่'); showLogin(); throw new Error('__handled'); }
+    throw e;
+  }
+}
+function fail(e, el) {
+  if (e.message === '__handled') return;
+  console.error(e);
+  if (el) el.textContent = e.message; else toast(e.message);
+}
+
+/* ─────────────────────────── ตัวช่วย ─────────────────────────── */
+const TH_M = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+const TH_D = ['อา.','จ.','อ.','พ.','พฤ.','ศ.','ส.'];
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = (n, d = 0) => (n == null || isNaN(n)) ? '–' : Number(n).toLocaleString('en-US', {minimumFractionDigits:d, maximumFractionDigits:d});
+const fmtIn = n => n == null || n === '' ? '' : Number(n).toLocaleString('en-US', {maximumFractionDigits:2});
+const pct = (a, b, d = 2) => b ? (a / b * 100).toFixed(d) + '%' : '–';
+const parseNum = v => { v = String(v ?? '').replace(/[,\s฿]/g, ''); if (v === '') return null; const n = Number(v); return isNaN(n) ? NaN : n; };
+const icon = k => `<svg class="i" viewBox="0 0 24 24">${ICON[k]}</svg>`;
+const pad = n => String(n).padStart(2, '0');
+const addDays = (s, n) => { const [y, m, d] = s.split('-').map(Number); const x = new Date(Date.UTC(y, m - 1, d + n)); return `${x.getUTCFullYear()}-${pad(x.getUTCMonth() + 1)}-${pad(x.getUTCDate())}`; };
+const dow = s => { const [y, m, d] = s.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d)).getUTCDay(); };
+const thDate = (s, withDow) => { const [y, m, d] = s.split('-').map(Number); return (withDow ? TH_D[dow(s)] + ' ' : '') + d + ' ' + TH_M[m - 1] + ' ' + String(y + 543).slice(2); };
+const thMonth = ym => { const [y, m] = ym.split('-').map(Number); return TH_M[m - 1] + ' ' + String(y + 543).slice(2); };
+const daysIn = ym => { const [y, m] = ym.split('-').map(Number); return new Date(Date.UTC(y, m, 0)).getUTCDate(); };
+const thTime = t => t ? new Date(t).toLocaleString('th-TH', {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit', timeZone:'Asia/Bangkok'}) : '';
+const isOwner = () => me && me.role === 'owner';
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('show'), 2400); }
+function loading(msg) { $('#main').innerHTML = `<div class="loading"><div class="spin"></div>${esc(msg || 'กำลังโหลด…')}</div>`; }
+function busy(btn, on) { if (btn) { btn.classList.toggle('busy', on); btn.disabled = on; } }
+
+/* ── คำนวณจากข้อมูลเดือน (MD) ── */
+const activeP = () => MD.platforms.filter(p => p.active);
+const dailyTarget = () => activeP().reduce((a, p) => a + (+p.target || 0), 0);
+const CAT = () => Object.fromEntries(MD.cats.map(c => [c.id, c]));
+function dayTotals(d) {
+  const r = MD.sales[d] || {}; let s = 0, a = 0, c = 0, n = 0;
+  for (const p of MD.platforms) { const v = r[p.id]; if (!v) continue; s += v.s || 0; a += v.a || 0; c += v.c || 0; n++; }
+  return {s, a, c, ads:a + c, n};
+}
+function monthCalc(ym) {
+  const C = CAT();
+  const days = Object.keys(MD.sales).filter(d => d.startsWith(ym)).sort();
+  const byP = Object.fromEntries(MD.platforms.map(p => [p.id, {s:0, a:0, c:0}]));
+  let s = 0, adsDaily = 0;
+  for (const d of days) for (const [pid, v] of Object.entries(MD.sales[d])) {
+    if (!byP[pid]) continue;
+    byP[pid].s += v.s || 0; byP[pid].a += v.a || 0; byP[pid].c += v.c || 0;
+    s += v.s || 0; adsDaily += (v.a || 0) + (v.c || 0);
+  }
+  const exps = MD.expenses;
+  const sum = f => exps.filter(f).reduce((a, e) => a + e.amt, 0);
+  const byCat = {}; for (const e of exps) byCat[e.cat] = (byCat[e.cat] || 0) + e.amt;
+  const adExtra = sum(e => C[e.cat]?.ad);
+  const mktOther = sum(e => C[e.cat]?.group === 'mkt' && !C[e.cat]?.ad);
+  const tools = sum(e => C[e.cat]?.group === 'tool');
+  const other = sum(e => !['mkt','tool'].includes(C[e.cat]?.group));
+  const ads = adsDaily + adExtra;
+  return {days, byP, s, adsDaily, adExtra, ads, mktOther, mkt:ads + mktOther, tools, other, byCat, exps};
+}
+function commissionFor(total) {
+  const t = MD.commission; let row = null, next = null;
+  for (const r of t) { if (total >= r[0]) row = r; else { next = r; break; } }
+  return {row, next, over:total >= t[t.length - 1][0] + 100000};
+}
+
+/* ─────────────────────────── ล็อกอิน ─────────────────────────── */
+async function showLogin() {
+  token = null; me = null; MD = null;
+  try { sessionStorage.removeItem(TOKEN_KEY); } catch (e) {}
+  $('#app').classList.add('hidden'); $('#login').classList.remove('hidden');
+  $('#pin').value = ''; $('#loginErr').textContent = '';
+  try {
+    const info = await call('appInfo');
+    TODAY = info.today;
+    let last = null; try { last = localStorage.getItem(TOKEN_KEY + '.who'); } catch (e) {}
+    $('#who').innerHTML = '<option value="">เลือกชื่อของคุณ</option>' + info.users.map(u => `<option value="${esc(u.id)}" ${u.id === last ? 'selected' : ''}>${esc(u.name)}</option>`).join('');
+    if (!info.users.length) $('#loginErr').textContent = 'ยังไม่มีผู้ใช้ ให้เจ้าของรัน setup ในหน้าแก้โค้ดก่อน';
+    ($('#who').value ? $('#pin') : $('#who')).focus();
+  } catch (e) { $('#loginErr').textContent = e.message; }
+}
+$('#loginForm').onsubmit = async ev => {
+  ev.preventDefault();
+  const uid = $('#who').value, pin = $('#pin').value.trim();
+  if (!uid) { $('#loginErr').textContent = 'เลือกชื่อก่อน'; return; }
+  if (!pin) { $('#loginErr').textContent = 'ใส่รหัส'; $('#pin').focus(); return; }
+  busy($('#loginBtn'), true); $('#loginErr').textContent = '';
+  try {
+    const r = await call('login', uid, pin);
+    try { sessionStorage.setItem(TOKEN_KEY, r.token); localStorage.setItem(TOKEN_KEY + '.who', uid); } catch (e) {}
+    token = r.token; start(r.user);
+  } catch (e) { $('#loginErr').textContent = e.message; $('#pin').value = ''; $('#pin').focus(); }
+  busy($('#loginBtn'), false);
+};
+$('#logout').onclick = () => { if (token) call('logout', token).catch(() => {}); showLogin(); };
+
+function start(u) {
+  me = u;
+  $('#login').classList.add('hidden'); $('#app').classList.remove('hidden');
+  $('#whoName').textContent = u.name;
+  $('#whoRole').textContent = u.role === 'owner' ? ' · ดูได้ทั้งหมด' : ' · พนักงาน';
+  go(isOwner() ? {page:'dash'} : {page:'entry'});
+}
+
+/* ─────────────────────────── เมนู + เปลี่ยนหน้า ─────────────────────────── */
+const NAV = [
+  {page:'dash', ic:'dash', t:'ภาพรวม', s:'แดชบอร์ดรายเดือน', owner:true},
+  {page:'days', ic:'day', t:'รายวัน', s:'ยอดทุกวันในเดือน', owner:true},
+  {page:'entry', ic:'edit', t:'กรอกยอดขาย', s:'บันทึกยอดต่อวัน', staff:true},
+  {page:'exp', ic:'exp', t:'ค่าใช้จ่าย', s:'อินฟลู เคลม เครื่องมือ', staff:true},
+  {page:'set', ic:'set', t:'ตั้งค่า', s:'เป้า รหัส สิทธิ์', owner:true},
+];
+let goSeq = 0;
+async function go(v) {
+  if (!isOwner() && !['entry', 'exp'].includes(v.page)) v = {page:'entry', date:v.date};
+  const seq = ++goSeq;
+  view = v;
+  const navPage = v.page === 'day' ? 'days' : v.page;
+  $('#nav').innerHTML = NAV.filter(n => n.staff || isOwner()).map(n =>
+    `<button class="opnav-item ${n.page === navPage ? 'on' : ''}" data-go="${n.page}">${icon(n.ic)}<span><b>${n.t}</b><small>${n.s}</small></span></button>`).join('');
+  window.scrollTo(0, 0);
+  try {
+    if (v.page === 'exp' && !isOwner()) {
+      loading();
+      const XD = await api('expenseMine');
+      if (seq !== goSeq) return;
+      TODAY = XD.today; renderStaffExp(XD);
+    } else if (['dash', 'days', 'day', 'exp'].includes(v.page)) {
+      if (v.page === 'day') v.ym = v.date.slice(0, 7);
+      if (!v.ym) v.ym = MD ? MD.ym : null;
+      if (!MD || MD.ym !== v.ym || v.reload) {
+        loading();
+        const first = !v.ym;
+        MD = await api('ownerMonth', v.ym || (TODAY || '').slice(0, 7));
+        // เปิดครั้งแรกแล้วเดือนนี้ยังว่าง → ไปเดือนล่าสุดที่มียอด
+        if (first && !Object.keys(MD.sales).some(d => d.startsWith(MD.ym))) {
+          const lastYm = MD.months.find(m => m < MD.ym);
+          if (lastYm) MD = await api('ownerMonth', lastYm);
+        }
+        v.ym = MD.ym; TODAY = MD.today;
+      }
+      if (seq !== goSeq) return;
+      ({dash:renderDash, days:renderDays, day:renderDay, exp:renderExp})[v.page]();
+    } else if (v.page === 'entry') {
+      loading();
+      const ED = await api('entryLoad', v.date || TODAY || '');
+      if (seq !== goSeq) return;
+      TODAY = ED.today; renderEntry(ED);
+    } else if (v.page === 'set') {
+      loading();
+      const SD = await api('settingsLoad');
+      if (seq !== goSeq) return;
+      renderSet(SD);
+    }
+  } catch (e) {
+    if (e.message === '__handled') return;
+    $('#main').innerHTML = `<div class="hint" style="color:#b3261e">${esc(e.message)}</div><button class="btn" id="retry">ลองใหม่</button>`;
+    $('#retry').onclick = () => go({...v, reload:true});
+  }
+}
+$('#nav').onclick = ev => { const b = ev.target.closest('[data-go]'); if (b) go({page:b.dataset.go, ym:MD && MD.ym}); };
+
+function monthPicker() {
+  return `<select id="ymSel">${MD.months.map(m => `<option value="${m}" ${m === MD.ym ? 'selected' : ''}>${thMonth(m)}</option>`).join('')}</select>`;
+}
+function bindMonth() { const s = $('#ymSel'); if (s) s.onchange = () => go({page:view.page, ym:s.value}); }
+const refreshBtn = () => `<button class="btn" id="reload" title="โหลดข้อมูลล่าสุด">โหลดใหม่</button>`;
+function bindReload() { const b = $('#reload'); if (b) b.onclick = () => go({...view, reload:true}); }
+
+/* ─────────────────────────── หน้า: ภาพรวม ─────────────────────────── */
+function renderDash() {
+  const ym = MD.ym, M = monthCalc(ym), dim = daysIn(ym), tgt = dailyTarget();
+  const nDays = M.days.length;
+  const hit = M.days.filter(d => dayTotals(d).s >= tgt).length;
+  const monthTarget = tgt * dim;
+  const cm = commissionFor(M.s);
+  const C = CAT();
+  const pRows = MD.platforms.filter(p => p.active || M.byP[p.id].s);
+  const maxShare = Math.max(...pRows.map(p => M.byP[p.id].s), 1);
+
+  $('#main').innerHTML = `
+    <div class="pagehead"><h1>ภาพรวม ${thMonth(ym)}</h1><div class="sp">${monthPicker()}${refreshBtn()}</div></div>
+    ${nDays ? '' : '<div class="hint">เดือนนี้ยังไม่มียอดขาย ลองเลือกเดือนอื่นจากเมนูมุมขวา</div>'}
+    <div class="cards">
+      <div class="stat"><div class="t">ยอดขายรวม</div><div class="v num">${fmt(M.s)}</div><div class="s">${nDays} วันที่กรอกแล้ว จาก ${dim} วัน</div></div>
+      <div class="stat"><div class="t">เทียบเป้าทั้งเดือน</div><div class="v num">${pct(M.s, monthTarget, 1)}</div><div class="s">เป้า ${fmt(monthTarget)} (${fmt(tgt)}/วัน)</div></div>
+      <div class="stat"><div class="t">ค่าแอดรวม</div><div class="v num">${fmt(M.ads)}</div><div class="s">${pct(M.ads, M.s)} ของยอดขาย</div></div>
+      <div class="stat"><div class="t">ค่าการตลาดทั้งหมด</div><div class="v num">${fmt(M.mkt)}</div><div class="s">${pct(M.mkt, M.s)} · แอด + อินฟลู + เคลม ฯลฯ</div></div>
+      <div class="stat"><div class="t">เฉลี่ยต่อวัน</div><div class="v num">${fmt(nDays ? M.s / nDays : 0)}</div><div class="s">ถึงเป้ารายวัน ${hit} จาก ${nDays} วัน</div></div>
+    </div>
+
+    <div class="sec-h">ยอดขายรายวัน <small>ชี้หรือแตะแท่งเพื่อดูแยกแพลตฟอร์ม · กดแท่งเพื่อเปิดวันนั้น</small></div>
+    <div class="card">
+      <div class="legend"><span><i></i>ถึงเป้า</span><span><i style="background:#94a3b8"></i>ต่ำกว่าเป้า</span><span><i class="ln"></i>เป้า ${fmt(tgt)}/วัน</span></div>
+      <div class="chart" id="chart"></div>
+    </div>
+
+    <div class="sec-h">แยกตามแพลตฟอร์ม</div>
+    <table class="tbl">
+      <thead><tr><th>แพลตฟอร์ม</th><th class="r">ยอดขาย</th><th class="r">สัดส่วน</th><th class="r">ค่าแอด</th><th class="r">% แอด</th><th class="r">เป้าทั้งเดือน</th><th class="r">ทำได้</th></tr></thead>
+      <tbody>${pRows.map(p => { const v = M.byP[p.id], ads = v.a + v.c, pt = p.target * dim;
+        return `<tr><td>${esc(p.name)}</td><td class="r">${fmt(v.s)}</td>
+          <td class="r"><div class="share"><i style="width:${Math.round(v.s / maxShare * 70)}px"></i>${pct(v.s, M.s)}</div></td>
+          <td class="r">${fmt(ads)}</td><td class="r">${pct(ads, v.s)}</td><td class="r">${fmt(pt)}</td>
+          <td class="r">${pt ? `<span class="zone ${v.s >= pt ? 'safe' : 'warn'}">${pct(v.s, pt, 0)}</span>` : '–'}</td></tr>`; }).join('')}
+      </tbody>
+      <tfoot><tr><td>รวม</td><td class="r">${fmt(M.s)}</td><td class="r">100%</td><td class="r">${fmt(M.adsDaily)}</td><td class="r">${pct(M.adsDaily, M.s)}</td><td class="r">${fmt(monthTarget)}</td><td class="r">${pct(M.s, monthTarget, 0)}</td></tr></tfoot>
+    </table>
+    ${M.adExtra ? `<div class="small muted" style="margin-top:6px">ค่าแอดในตารางนี้คือที่กรอกรายวัน ยังไม่รวมค่าแอดเพิ่มเติม ${fmt(M.adExtra)} บาทที่บันทึกในหน้าค่าใช้จ่าย</div>` : ''}
+
+    <div class="grid2" style="margin-top:26px">
+      <div class="card">
+        <div class="sec-h" style="margin-top:0">ค่าใช้จ่ายเดือนนี้</div>
+        <div class="kv"><span>ค่าแอด (กรอกรายวัน)</span><b>${fmt(M.adsDaily)}</b></div>
+        ${MD.cats.filter(c => c.group === 'mkt' && M.byCat[c.id]).map(c => `<div class="kv"><span>${esc(c.name)}</span><b>${fmt(M.byCat[c.id], M.byCat[c.id] % 1 ? 2 : 0)}</b></div>`).join('')}
+        <div class="kv" style="border-top:1px solid rgb(var(--line)/.14)"><span><b style="font-family:Anuphan">รวมค่าการตลาด</b> <span class="small muted">(${pct(M.mkt, M.s)})</span></span><b>${fmt(M.mkt)}</b></div>
+        ${M.tools ? `<div class="kv"><span>ค่าเครื่องมือออนไลน์</span><b>${fmt(M.tools, 2)}</b></div>` : ''}
+        ${M.other ? `<div class="kv"><span>ค่าใช้จ่ายอื่นๆ</span><b>${fmt(M.other)}</b></div>` : ''}
+        <div class="kv"><span><b style="font-family:Anuphan">รวมค่าใช้จ่ายทั้งหมด</b> <span class="small muted">(${pct(M.mkt + M.tools + M.other, M.s)})</span></span><b>${fmt(M.mkt + M.tools + M.other, 2)}</b></div>
+        <div style="margin-top:12px"><button class="mini" data-go2="exp">ดู / เพิ่มค่าใช้จ่าย</button></div>
+      </div>
+      <div class="card">
+        <div class="sec-h" style="margin-top:0">ค่าคอมมิชชั่นพนักงาน</div>
+        ${cm.row ? `
+          <div class="small muted">ยอดเดือนนี้ ${fmt(M.s)} อยู่ขั้น ${fmt(cm.row[0])}</div>
+          <div class="kv"><span>คอนเทนต์</span><b>${fmt(cm.row[1])}</b></div>
+          <div class="kv"><span>พนักงานแพ็ค</span><b>${fmt(cm.row[2])}</b></div>
+          <div class="kv"><span>หัวหน้า</span><b>${fmt(cm.row[3])}</b></div>`
+        : `<div class="small muted">ยอดยังไม่ถึง ${fmt(MD.commission[0][0])} บาท ยังไม่ได้ค่าคอมมิชชั่น</div>`}
+        ${cm.next ? `<div class="tierbar"><i style="width:${Math.min(100, M.s / cm.next[0] * 100).toFixed(1)}%"></i></div>
+          <div class="small muted">อีก <b class="num" style="color:rgb(var(--ink))">${fmt(cm.next[0] - M.s)}</b> บาท ถึงขั้น ${fmt(cm.next[0])} (หัวหน้า ${fmt(cm.next[3])})</div>` : ''}
+        ${cm.over ? `<div class="small muted" style="margin-top:8px">ยอดเกินตาราง (สูงสุด 5,000,000) ยังใช้ขั้นสุดท้าย</div>` : ''}
+      </div>
+    </div>`;
+  bindMonth(); bindReload();
+  document.querySelectorAll('[data-go2]').forEach(b => b.onclick = () => go({page:b.dataset.go2, ym}));
+  drawChart(ym, tgt);
+}
+
+function drawChart(ym, tgt) {
+  const el = $('#chart'), dim = daysIn(ym);
+  const vals = []; for (let i = 1; i <= dim; i++) { const d = `${ym}-${pad(i)}`; vals.push({d, ...dayTotals(d)}); }
+  const W = 900, H = 280, L = 54, R = 10, T = 12, B = 28;
+  const max = Math.max(tgt, ...vals.map(v => v.s)) * 1.08 || 1;
+  const step = niceStep(max / 4);
+  const y = v => T + (H - T - B) * (1 - v / max);
+  const bw = (W - L - R) / dim, barW = Math.max(4, bw - 6);
+  let g = '';
+  for (let v = 0; v <= max; v += step) g += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="#e5e7eb" stroke-width="1"/><text x="${L - 8}" y="${y(v) + 4}" text-anchor="end" font-size="11" fill="#8b90a0">${v >= 1000 ? fmt(v / 1000) + 'k' : v}</text>`;
+  vals.forEach((v, i) => {
+    const x = L + i * bw + (bw - barW) / 2;
+    if (v.s > 0) {
+      const top = y(v.s), h = y(0) - top, r = Math.min(4, barW / 2, h);
+      g += `<path d="M${x},${y(0)} V${top + r} q0,-${r} ${r},-${r} H${x + barW - r} q${r},0 ${r},${r} V${y(0)} Z" fill="${v.s >= tgt ? '#334155' : '#94a3b8'}"/>`;
+    }
+    if (dim <= 20 || i % 2 === 0) g += `<text x="${x + barW / 2}" y="${H - 8}" text-anchor="middle" font-size="11" fill="#8b90a0">${i + 1}</text>`;
+  });
+  g += `<line x1="${L}" x2="${W - R}" y1="${y(tgt)}" y2="${y(tgt)}" stroke="#b3261e" stroke-width="2" stroke-dasharray="6 5"/>`;
+  g += `<line x1="${L}" x2="${W - R}" y1="${y(0)}" y2="${y(0)}" stroke="#c3c7d0" stroke-width="1"/>`;
+  vals.forEach((v, i) => g += `<rect class="hit" data-i="${i}" x="${L + i * bw}" y="${T}" width="${bw}" height="${H - T - B}" fill="transparent" style="cursor:${v.n ? 'pointer' : 'default'}"/>`);
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="กราฟยอดขายรายวัน">${g}</svg><div class="tt" style="opacity:0"></div>`;
+  const tt = el.querySelector('.tt');
+  const show = (i, ev) => {
+    const v = vals[i], r = MD.sales[v.d] || {};
+    tt.innerHTML = `<div class="h">${thDate(v.d, true)}</div>` + (v.n ? activeP().map(p => `<div class="row"><span>${esc(p.name)}</span><span>${fmt(r[p.id]?.s)}</span></div>`).join('') +
+      `<div class="row tot"><span>รวม</span><span>${fmt(v.s)}</span></div><div class="row"><span>ค่าแอด</span><span>${fmt(v.ads)} (${pct(v.ads, v.s, 1)})</span></div><div class="row"><span>เทียบเป้า</span><span class="${v.s >= tgt ? 'up' : 'down'}">${v.s >= tgt ? '+' : ''}${fmt(v.s - tgt)}</span></div>` : '<div class="muted">ยังไม่มีข้อมูล</div>');
+    const box = el.getBoundingClientRect();
+    let x = (ev.clientX - box.left) + 14; if (x + 210 > box.width) x = (ev.clientX - box.left) - 214; if (x < 0) x = 0;
+    tt.style.left = x + 'px'; tt.style.top = '8px'; tt.style.opacity = 1;
+  };
+  el.querySelectorAll('.hit').forEach(h => {
+    h.addEventListener('mousemove', ev => show(+h.dataset.i, ev));
+    h.addEventListener('mouseleave', () => tt.style.opacity = 0);
+    h.addEventListener('click', ev => { const v = vals[+h.dataset.i]; if (!v.n) return; if (matchMedia('(hover:none)').matches && tt.dataset.i !== h.dataset.i) { tt.dataset.i = h.dataset.i; show(+h.dataset.i, ev); return; } go({page:'day', date:v.d}); });
+  });
+}
+function niceStep(x) { const p = Math.pow(10, Math.floor(Math.log10(x))), f = x / p; return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * p; }
+
+/* ─────────────────────────── หน้า: รายวัน ─────────────────────────── */
+function renderDays() {
+  const ym = MD.ym, tgt = dailyTarget(), dim = daysIn(ym), nP = activeP().length;
+  let rows = '', prev = dayTotals(addDays(`${ym}-01`, -1)).s, sumS = 0, sumA = 0;
+  for (let i = 1; i <= dim; i++) {
+    const d = `${ym}-${pad(i)}`, t = dayTotals(d);
+    if (!t.n) { if (d <= MD.today) rows += `<tr><td>${thDate(d, true)}</td><td colspan="5" class="muted small">ยังไม่ได้กรอก</td><td class="r"><button class="mini" data-entry="${d}">กรอก</button></td></tr>`; prev = 0; continue; }
+    const ch = prev ? (t.s - prev) / prev * 100 : null;
+    const who = [...new Set(Object.values(MD.sales[d]).map(v => v.by))].join(', ');
+    rows += `<tr class="go" data-day="${d}"><td>${thDate(d, true)}</td><td class="r">${fmt(t.s)}</td>
+      <td class="r ${ch == null ? '' : ch >= 0 ? 'up' : 'down'}">${ch == null ? '–' : (ch >= 0 ? '+' : '') + ch.toFixed(1) + '%'}</td>
+      <td class="r">${fmt(t.ads)}</td><td class="r">${pct(t.ads, t.s)}</td>
+      <td class="r"><span class="zone ${t.s >= tgt ? 'safe' : 'warn'}">${t.s >= tgt ? '+' : ''}${fmt(t.s - tgt)}</span></td>
+      <td class="small muted">${t.n < nP ? `<span class="zone gray">กรอก ${t.n}/${nP}</span> ` : ''}${esc(who)}</td></tr>`;
+    prev = t.s; sumS += t.s; sumA += t.ads;
+  }
+  $('#main').innerHTML = `
+    <div class="pagehead"><h1>รายวัน ${thMonth(ym)}</h1><div class="sp">${monthPicker()}${refreshBtn()}<a class="btn" href="${esc(MD.sheetUrl)}" target="_blank" rel="noopener">เปิดใน Google Sheet</a></div></div>
+    <table class="tbl">
+      <thead><tr><th>วันที่</th><th class="r">ยอดขาย</th><th class="r">เทียบวันก่อน</th><th class="r">ค่าแอด</th><th class="r">% แอด</th><th class="r">เทียบเป้า ${fmt(tgt)}</th><th>ผู้กรอก</th></tr></thead>
+      <tbody>${rows || '<tr><td colspan="7" class="empty">ยังไม่มีข้อมูล</td></tr>'}</tbody>
+      <tfoot><tr><td>รวม</td><td class="r">${fmt(sumS)}</td><td></td><td class="r">${fmt(sumA)}</td><td class="r">${pct(sumA, sumS)}</td><td></td><td></td></tr></tfoot>
+    </table>`;
+  bindMonth(); bindReload();
+  document.querySelectorAll('[data-day]').forEach(r => r.onclick = () => go({page:'day', date:r.dataset.day}));
+  document.querySelectorAll('[data-entry]').forEach(b => b.onclick = ev => { ev.stopPropagation(); go({page:'entry', date:b.dataset.entry}); });
+}
+
+/* ─────────────────────────── หน้า: รายละเอียด 1 วัน ─────────────────────────── */
+function renderDay() {
+  const d = view.date, r = MD.sales[d] || {}, t = dayTotals(d), pt = dayTotals(addDays(d, -1)), tgt = dailyTarget();
+  const prevR = MD.sales[addDays(d, -1)] || {};
+  $('#main').innerHTML = `
+    <button class="back" id="back">${icon('back')} กลับไปหน้ารายวัน</button>
+    <div class="pagehead"><h1>${thDate(d, true)}</h1><div class="sp">
+      <button class="btn" id="prevD">วันก่อน</button><button class="btn" id="nextD">วันถัดไป</button>
+      <button class="btn dark" id="editD">แก้ไขยอดวันนี้</button></div></div>
+    <div class="cards">
+      <div class="stat"><div class="t">ยอดขายรวม</div><div class="v num">${fmt(t.s)}</div><div class="s">${pt.s ? `เทียบวันก่อน <span class="${t.s >= pt.s ? 'up' : 'down'}">${t.s >= pt.s ? '+' : ''}${pct(t.s - pt.s, pt.s, 1)}</span>` : 'ไม่มียอดวันก่อน'}</div></div>
+      <div class="stat"><div class="t">ค่าแอดรวม</div><div class="v num">${fmt(t.ads)}</div><div class="s">${pct(t.ads, t.s)} ของยอดขาย</div></div>
+      <div class="stat"><div class="t">เทียบเป้ารายวัน</div><div class="v num ${t.s >= tgt ? 'up' : 'down'}">${t.s >= tgt ? '+' : ''}${fmt(t.s - tgt)}</div><div class="s">เป้า ${fmt(tgt)}</div></div>
+    </div>
+    <div class="sec-h">แยกตามแพลตฟอร์ม</div>
+    <table class="tbl">
+      <thead><tr><th>แพลตฟอร์ม</th><th class="r">ยอดขาย</th><th class="r">แอดปกติ</th><th class="r">CPAC</th><th class="r">แอดรวม</th><th class="r">% แอด</th><th class="r">เทียบวันก่อน</th><th class="r">ต่างจากเป้า</th><th>กรอกโดย</th></tr></thead>
+      <tbody>${MD.platforms.filter(p => p.active || r[p.id]).map(p => {
+        const v = r[p.id], pv = prevR[p.id];
+        if (!v) return `<tr><td>${esc(p.name)}</td><td colspan="8" class="muted small">ยังไม่ได้กรอก</td></tr>`;
+        const ads = (v.a || 0) + (v.c || 0), ch = pv && pv.s ? (v.s - pv.s) / pv.s * 100 : null;
+        return `<tr><td>${esc(p.name)}</td><td class="r">${fmt(v.s)}</td><td class="r">${fmt(v.a)}</td><td class="r">${v.c ? fmt(v.c) : '–'}</td><td class="r">${fmt(ads)}</td><td class="r">${pct(ads, v.s)}</td>
+          <td class="r ${ch == null ? '' : ch >= 0 ? 'up' : 'down'}">${ch == null ? '–' : (ch >= 0 ? '+' : '') + ch.toFixed(1) + '%'}</td>
+          <td class="r ${v.s >= p.target ? 'up' : 'down'}">${v.s >= p.target ? '+' : ''}${fmt(v.s - p.target)}</td>
+          <td class="small muted">${esc(v.by)}${v.at ? ' · ' + thTime(v.at) : ''}</td></tr>`; }).join('')}
+      </tbody>
+      <tfoot><tr><td>รวม</td><td class="r">${fmt(t.s)}</td><td class="r">${fmt(t.a)}</td><td class="r">${fmt(t.c)}</td><td class="r">${fmt(t.ads)}</td><td class="r">${pct(t.ads, t.s)}</td><td></td><td class="r">${fmt(t.s - tgt)}</td><td></td></tr></tfoot>
+    </table>`;
+  $('#back').onclick = () => go({page:'days', ym:d.slice(0, 7)});
+  $('#prevD').onclick = () => go({page:'day', date:addDays(d, -1)});
+  $('#nextD').onclick = () => go({page:'day', date:addDays(d, 1)});
+  $('#editD').onclick = () => go({page:'entry', date:d, from:'day'});
+}
+
+/* ─────────────────────────── หน้า: กรอกยอดขาย ─────────────────────────── */
+function renderEntry(ED) {
+  const owner = isOwner(), showAds = ED.canAds, d = ED.date, r = ED.values;
+  const fromDay = view.from === 'day';
+  $('#main').innerHTML = `
+    ${fromDay ? `<button class="back" id="back">${icon('back')} กลับไปวันที่ ${thDate(d)}</button>` : ''}
+    <div class="pagehead"><h1>กรอกยอดขาย</h1>
+      <div class="sp"><input type="date" id="dSel" value="${d}" ${ED.minDate ? `min="${ED.minDate}"` : ''} ${ED.maxDate ? `max="${ED.maxDate}"` : ''}></div></div>
+    <div class="hint">${thDate(d, true)} · ${owner ? 'เจ้าของแก้ได้ทุกวัน' : `แก้ได้เฉพาะวันนี้${ED.staffBackDays ? ` และย้อนหลัง ${ED.staffBackDays} วัน` : ''}`} · ช่องที่เว้นว่างถือว่ายังไม่ได้กรอก</div>
+    <form id="entryForm" class="entry" autocomplete="off">
+      ${ED.platforms.map(p => { const v = r[p.id];
+        return `<div class="prow ${showAds ? '' : 'noads'}" data-p="${esc(p.id)}">
+          <div class="pn"><b>${esc(p.name)}</b><small>${v && v.by ? 'กรอกล่าสุดโดย ' + esc(v.by) + (v.at ? ' · ' + thTime(v.at) : '') : 'ยังไม่ได้กรอก'}</small></div>
+          <div><label>ยอดขาย (บาท)</label><input name="s" inputmode="decimal" value="${v ? fmtIn(v.s) : ''}" placeholder="0"></div>
+          ${showAds ? `<div><label>ค่าแอดปกติ</label><input name="a" inputmode="decimal" value="${v ? fmtIn(v.a) : ''}" placeholder="0"></div>
+          <div><label>ค่าแอด CPAC</label><input name="c" inputmode="decimal" value="${v && v.c ? fmtIn(v.c) : ''}" placeholder="0"></div>` : ''}
+        </div>`; }).join('')}
+      <div class="totbar">
+        <span class="muted small">ยอดรวมที่กรอก</span><b class="disp num" id="liveTot" style="font-size:20px">0</b>
+        ${showAds ? `<span class="muted small">ค่าแอด</span><b class="disp num" id="liveAds">0</b>` : ''}
+        <div class="sp"><button class="btn dark" type="submit" id="saveBtn">บันทึกยอดวันที่ ${thDate(d)}</button></div>
+      </div>
+      <div class="err" id="entryErr"></div>
+    </form>
+    ${owner ? '' : `<div class="sec-h">ที่คุณกรอกล่าสุด</div>
+      ${ED.mine && ED.mine.length ? `<table class="tbl"><thead><tr><th>วันที่</th><th>แพลตฟอร์ม</th><th class="r">ยอดขาย</th><th>บันทึกเมื่อ</th></tr></thead><tbody>
+        ${ED.mine.map(m => `<tr><td>${thDate(m.date)}</td><td>${esc(m.name)}</td><td class="r">${fmt(m.s)}</td><td class="small muted">${thTime(m.at)}</td></tr>`).join('')}</tbody></table>`
+        : '<div class="card empty">ยังไม่มีรายการ</div>'}`}`;
+
+  const f = $('#entryForm');
+  const live = () => {
+    let s = 0, a = 0;
+    f.querySelectorAll('.prow').forEach(row => { s += parseNum(row.querySelector('[name=s]').value) || 0;
+      if (showAds) a += (parseNum(row.querySelector('[name=a]').value) || 0) + (parseNum(row.querySelector('[name=c]').value) || 0); });
+    $('#liveTot').textContent = fmt(s); if (showAds) $('#liveAds').textContent = fmt(a);
+  };
+  f.addEventListener('input', live);
+  f.addEventListener('focusout', ev => { if (ev.target.tagName === 'INPUT') { const n = parseNum(ev.target.value); if (n != null && !isNaN(n)) ev.target.value = fmtIn(n); } });
+  live();
+  $('#dSel').onchange = ev => { if (ev.target.value) go({page:'entry', date:ev.target.value, from:view.from}); };
+  if ($('#back')) $('#back').onclick = () => go({page:'day', date:d});
+
+  f.onsubmit = async ev => {
+    ev.preventDefault();
+    const values = {};
+    let bad = null;
+    f.querySelectorAll('.prow').forEach(row => {
+      const pid = row.dataset.p, get = n => { const el = row.querySelector(`[name=${n}]`); return el ? parseNum(el.value) : undefined; };
+      const v = {s:get('s')};
+      if (showAds) { v.a = get('a'); v.c = get('c'); }
+      if (Object.values(v).some(x => x != null && (isNaN(x) || x < 0))) bad = row.querySelector('b').textContent;
+      values[pid] = v;
+    });
+    if (bad) { $('#entryErr').textContent = `ตัวเลขของ ${bad} ไม่ถูกต้อง`; return; }
+    $('#entryErr').textContent = '';
+    busy($('#saveBtn'), true);
+    try {
+      const out = await api('entrySave', d, values);
+      toast(`บันทึกยอดวันที่ ${thDate(d)} แล้ว`);
+      if (MD && MD.ym === d.slice(0, 7)) MD = null;   // ให้แดชบอร์ดโหลดใหม่
+      if (owner && fromDay) go({page:'day', date:d, ym:d.slice(0, 7)});
+      else renderEntry(out);
+    } catch (e) { fail(e, $('#entryErr')); busy($('#saveBtn'), false); }
+  };
+}
+
+/* ─────────────────────────── หน้า: ค่าใช้จ่าย ─────────────────────────── */
+function renderExp() {
+  const ym = MD.ym, M = monthCalc(ym), C = CAT();
+  const list = M.exps.slice().sort((a, b) => b.date.localeCompare(a.date) || b.at - a.at);
+  const defDate = ym === MD.today.slice(0, 7) ? MD.today : `${ym}-${pad(daysIn(ym))}`;
+  $('#main').innerHTML = `
+    <div class="pagehead"><h1>ค่าใช้จ่าย ${thMonth(ym)}</h1><div class="sp">${monthPicker()}</div></div>
+    <form class="card" id="expForm" autocomplete="off">
+      <div class="formrow">
+        <div><label>วันที่</label><input type="date" name="date" value="${defDate}" required></div>
+        <div><label>หมวด</label><select name="cat">${MD.cats.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select></div>
+        <div><label>จำนวนเงิน (บาท)</label><input name="amt" inputmode="decimal" placeholder="0" style="text-align:right"></div>
+        <div class="wide"><label>รายละเอียด</label><input name="note" maxlength="200" placeholder="เช่น ชื่ออินฟลู / เลขเคลม"></div>
+        <div><button class="btn dark" type="submit" id="expBtn">เพิ่ม</button></div>
+      </div>
+      <div class="err" id="expErr"></div>
+    </form>
+    <div class="cards" style="margin-top:14px">
+      <div class="stat"><div class="t">ค่าการตลาด (ไม่รวมแอดรายวัน)</div><div class="v num">${fmt(M.mktOther + M.adExtra)}</div></div>
+      <div class="stat"><div class="t">ค่าเครื่องมือออนไลน์</div><div class="v num">${fmt(M.tools, 2)}</div></div>
+      <div class="stat"><div class="t">ค่าใช้จ่ายอื่นๆ</div><div class="v num">${fmt(M.other)}</div></div>
+    </div>
+    <div class="sec-h">รายการ <small>${list.length} รายการ</small></div>
+    <table class="tbl">
+      <thead><tr><th>วันที่</th><th>หมวด</th><th>รายละเอียด</th><th class="r">จำนวนเงิน</th><th>บันทึกโดย</th><th></th></tr></thead>
+      <tbody>${list.map(e => `<tr><td>${thDate(e.date)}</td><td>${esc(C[e.cat]?.name || e.cat)}</td><td>${esc(e.note)}</td><td class="r">${fmt(e.amt, e.amt % 1 ? 2 : 0)}</td><td class="small muted">${esc(e.by)}</td><td class="r"><button class="mini danger" data-del="${esc(e.id)}">ลบ</button></td></tr>`).join('') || '<tr><td colspan="6" class="empty">ยังไม่มีรายการในเดือนนี้</td></tr>'}</tbody>
+    </table>`;
+  bindMonth();
+  $('#expForm').onsubmit = async ev => {
+    ev.preventDefault();
+    const fd = new FormData(ev.target), amt = parseNum(fd.get('amt'));
+    if (!amt || isNaN(amt) || amt <= 0) { $('#expErr').textContent = 'ใส่จำนวนเงินให้ถูกต้อง'; return; }
+    busy($('#expBtn'), true);
+    try {
+      MD = await api('expenseAdd', {date:fd.get('date'), cat:fd.get('cat'), amt, note:String(fd.get('note') || '').trim(), reqId:newId('x')});
+      toast('เพิ่มค่าใช้จ่ายแล้ว'); go({page:'exp', ym:MD.ym});
+    } catch (e) { fail(e, $('#expErr')); busy($('#expBtn'), false); }
+  };
+  document.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
+    const e = M.exps.find(x => x.id === b.dataset.del);
+    if (!e || !confirm(`ลบ ${C[e.cat]?.name || e.cat} ${fmt(e.amt)} บาท?`)) return;
+    busy(b, true);
+    try { MD = await api('expenseDelete', e.id, ym); toast('ลบแล้ว'); go({page:'exp', ym}); }
+    catch (err) { fail(err); busy(b, false); }
+  });
+}
+
+/* ── ค่าใช้จ่ายของพนักงาน: กรอกได้ เห็นเฉพาะที่ตัวเองกรอก ── */
+function renderStaffExp(XD) {
+  const C = Object.fromEntries(XD.cats.map(c => [c.id, c]));
+  $('#main').innerHTML = `
+    <div class="pagehead"><h1>กรอกค่าใช้จ่าย</h1></div>
+    <div class="hint">กรอกได้เฉพาะวันนี้${XD.staffBackDays ? ` และย้อนหลัง ${XD.staffBackDays} วัน` : ''} · ลบได้เฉพาะรายการที่คุณกรอกเองในช่วงนี้</div>
+    <form class="card" id="expForm" autocomplete="off">
+      <div class="formrow">
+        <div><label>วันที่</label><input type="date" name="date" value="${XD.today}" min="${XD.minDate}" max="${XD.maxDate}" required></div>
+        <div><label>หมวด</label><select name="cat">${XD.cats.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select></div>
+        <div><label>จำนวนเงิน (บาท)</label><input name="amt" inputmode="decimal" placeholder="0" style="text-align:right"></div>
+        <div class="wide"><label>รายละเอียด</label><input name="note" maxlength="200" placeholder="เช่น ชื่ออินฟลู / เลขเคลม"></div>
+        <div><button class="btn dark" type="submit" id="expBtn">บันทึก</button></div>
+      </div>
+      <div class="err" id="expErr"></div>
+    </form>
+    <div class="sec-h">ที่คุณกรอกล่าสุด</div>
+    ${XD.mine.length ? `<table class="tbl"><thead><tr><th>วันที่</th><th>หมวด</th><th>รายละเอียด</th><th class="r">จำนวนเงิน</th><th>บันทึกเมื่อ</th><th></th></tr></thead><tbody>
+      ${XD.mine.map(e => `<tr><td>${thDate(e.date)}</td><td>${esc(C[e.cat]?.name || e.cat)}</td><td>${esc(e.note)}</td><td class="r">${fmt(e.amt, e.amt % 1 ? 2 : 0)}</td><td class="small muted">${thTime(e.at)}</td>
+        <td class="r">${e.canDelete ? `<button class="mini danger" data-del="${esc(e.id)}">ลบ</button>` : ''}</td></tr>`).join('')}</tbody></table>`
+      : '<div class="card empty">ยังไม่มีรายการ</div>'}`;
+  $('#expForm').onsubmit = async ev => {
+    ev.preventDefault();
+    const fd = new FormData(ev.target), amt = parseNum(fd.get('amt'));
+    if (!amt || isNaN(amt) || amt <= 0) { $('#expErr').textContent = 'ใส่จำนวนเงินให้ถูกต้อง'; return; }
+    busy($('#expBtn'), true);
+    try {
+      const out = await api('expenseAdd', {date:fd.get('date'), cat:fd.get('cat'), amt, note:String(fd.get('note') || '').trim(), reqId:newId('x')});
+      toast('บันทึกค่าใช้จ่ายแล้ว'); renderStaffExp(out);
+    } catch (e) { fail(e, $('#expErr')); busy($('#expBtn'), false); }
+  };
+  document.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
+    const e = XD.mine.find(x => x.id === b.dataset.del);
+    if (!e || !confirm(`ลบ ${C[e.cat]?.name || e.cat} ${fmt(e.amt)} บาท?`)) return;
+    busy(b, true);
+    try { const out = await api('expenseDelete', e.id, ''); toast('ลบแล้ว'); renderStaffExp(out); }
+    catch (err) { fail(err); busy(b, false); }
+  });
+}
+
+/* ─────────────────────────── หน้า: ตั้งค่า ─────────────────────────── */
+function renderSet(SD) {
+  const rowP = p => `<tr data-p="${esc(p.id)}"><td><input name="name" value="${esc(p.name)}"></td><td class="r"><input name="target" value="${fmtIn(p.target)}" inputmode="decimal" style="text-align:right;max-width:160px"></td><td><input type="checkbox" name="active" ${p.active ? 'checked' : ''} style="width:18px;height:18px"></td></tr>`;
+  const roleSel = r => `<select name="role" style="max-width:240px"><option value="staff" ${r === 'staff' ? 'selected' : ''}>พนักงาน · กรอกยอดขายและค่าใช้จ่าย</option><option value="owner" ${r === 'owner' ? 'selected' : ''}>เจ้าของ · ดูได้ทั้งหมด</option></select>`;
+  const rowU = u => `<tr data-u="${esc(u.id || u.newId || '')}"><td><input name="name" value="${esc(u.name || '')}" placeholder="ชื่อพนักงาน"></td>
+    <td><input name="pin" inputmode="numeric" maxlength="6" style="max-width:150px" placeholder="${u.id ? 'ไม่เปลี่ยน' : 'ตั้งรหัส'}"></td>
+    <td>${roleSel(u.role || 'staff')}</td>
+    <td class="r">${u.id === me.id ? '<span class="small muted">คุณ</span>' : '<button class="mini danger" data-delu>ลบ</button>'}</td></tr>`;
+  const tgtSum = SD.platforms.filter(p => p.active).reduce((a, p) => a + (+p.target || 0), 0);
+  $('#main').innerHTML = `
+    <div class="pagehead"><h1>ตั้งค่า</h1><div class="sp"><a class="btn" href="${esc(SD.sheetUrl)}" target="_blank" rel="noopener">เปิดใน Google Sheet</a></div></div>
+    <div class="sec-h">แพลตฟอร์มและเป้ายอดขายต่อวัน</div>
+    <table class="tbl" id="pTbl">
+      <thead><tr><th>ชื่อแพลตฟอร์ม</th><th class="r">เป้าต่อวัน (บาท)</th><th>ใช้งาน</th></tr></thead>
+      <tbody>${SD.platforms.map(rowP).join('')}</tbody>
+      <tfoot><tr><td>เป้ารวมต่อวัน (ที่ใช้งาน)</td><td class="r">${fmt(tgtSum)}</td><td></td></tr></tfoot>
+    </table>
+    <div class="small muted" style="margin-top:6px">ชื่อแพลตฟอร์มควรมีคำว่า SHOPEE / LAZADA / TIKTOK / FACEBOOK / LINE เพื่อให้แอพกำไรจริงจับคู่ได้</div>
+    <div style="display:flex;gap:8px;margin-top:10px"><button class="btn" id="addP">เพิ่มแพลตฟอร์ม</button><button class="btn dark" id="saveP">บันทึกแพลตฟอร์ม</button></div>
+    <div class="err" id="pErr"></div>
+
+    <div class="sec-h">ผู้ใช้และรหัสเข้า <small>เจ้าของ 6 หลัก · พนักงาน 4–6 หลัก · เว้นช่องรหัสว่าง = ใช้รหัสเดิม</small></div>
+    <table class="tbl" id="uTbl">
+      <thead><tr><th>ชื่อ</th><th>รหัสใหม่</th><th>สิทธิ์</th><th></th></tr></thead>
+      <tbody>${SD.users.map(rowU).join('')}</tbody>
+    </table>
+    <div style="display:flex;gap:8px;margin-top:10px"><button class="btn" id="addU">เพิ่มผู้ใช้</button><button class="btn dark" id="saveU">บันทึกผู้ใช้</button></div>
+    <div class="err" id="uErr"></div>
+
+    <div class="sec-h">สิทธิ์พนักงาน</div>
+    <div class="card" style="display:flex;flex-direction:column;gap:12px">
+      <label class="switch" style="margin:0;color:rgb(var(--ink))"><input type="checkbox" id="canAds" ${SD.staffCanAds ? 'checked' : ''}> ให้พนักงานกรอกค่าแอดได้ด้วย</label>
+      <label class="switch" style="margin:0;color:rgb(var(--ink))">พนักงานกรอก/แก้ย้อนหลังได้ (ยอดขายและค่าใช้จ่าย)
+        <select id="backDays" style="width:auto">${[0,1,2,3,7].map(n => `<option value="${n}" ${SD.staffBackDays === n ? 'selected' : ''}>${n ? n + ' วัน' : 'วันนี้เท่านั้น'}</option>`).join('')}</select></label>
+    </div>`;
+
+  $('#addP').onclick = () => $('#pTbl tbody').insertAdjacentHTML('beforeend', rowP({id:newId('p_'), name:'', target:0, active:true}));
+  $('#saveP').onclick = async ev => {
+    const platforms = [...document.querySelectorAll('#pTbl tbody tr')].map(tr => ({
+      id:tr.dataset.p, name:tr.querySelector('[name=name]').value.trim(),
+      target:parseNum(tr.querySelector('[name=target]').value) || 0, active:tr.querySelector('[name=active]').checked}));
+    busy(ev.target, true);
+    try { const sd = await api('settingsSavePlatforms', platforms); MD = null; toast('บันทึกแพลตฟอร์มแล้ว'); renderSet(sd); }
+    catch (e) { fail(e, $('#pErr')); busy(ev.target, false); }
+  };
+  $('#uTbl').onclick = ev => { const b = ev.target.closest('[data-delu]'); if (b) b.closest('tr').remove(); };
+  $('#addU').onclick = () => $('#uTbl tbody').insertAdjacentHTML('beforeend', rowU({newId:newId('u_')}));
+  $('#saveU').onclick = async ev => {
+    const users = [...document.querySelectorAll('#uTbl tbody tr')].map(tr => ({
+      id:tr.dataset.u, name:tr.querySelector('[name=name]').value.trim(),
+      pin:tr.querySelector('[name=pin]').value.trim(), role:tr.querySelector('[name=role]').value}));
+    busy(ev.target, true); $('#uErr').textContent = '';
+    try {
+      const sd = await api('usersSave', users);
+      const self = sd.users.find(u => u.id === me.id); if (self) { me = self; $('#whoName').textContent = me.name; }
+      toast('บันทึกผู้ใช้แล้ว'); renderSet(sd);
+    } catch (e) { fail(e, $('#uErr')); busy(ev.target, false); }
+  };
+  const saveAccess = async () => {
+    try { await api('settingsSaveAccess', {staffCanAds:$('#canAds').checked, staffBackDays:+$('#backDays').value}); toast('บันทึกแล้ว'); }
+    catch (e) { fail(e); }
+  };
+  $('#canAds').onchange = saveAccess; $('#backDays').onchange = saveAccess;
+}
+
+/* ─────────────────────────── เริ่มต้น ─────────────────────────── */
+(async () => {
+  let t = null; try { t = sessionStorage.getItem(TOKEN_KEY); } catch (e) {}
+  if (t) {
+    try { const r = await call('whoami', t); token = t; TODAY = r.today; return start(r.user); } catch (e) {}
+  }
+  showLogin();
+})();
+</script>
+</body>
+</html>
