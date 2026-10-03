@@ -675,6 +675,15 @@ function renderEntry(ED) {
       values[pid] = v;
     });
     if (bad) { $('#entryErr').textContent = `ตัวเลขของ ${bad} ไม่ถูกต้อง`; return; }
+    // กันพิมพ์ผิด: "52.300" (น่าจะหมายถึง 52,300) หรือยอดสูงเกิน 10 เท่าของเป้ารายวัน (น่าจะเกิน 0)
+    const warn = [];
+    f.querySelectorAll('.prow').forEach(row => {
+      const p = ED.platforms.find(x => x.id === row.dataset.p), nm = p ? p.name : '';
+      row.querySelectorAll('input').forEach(el => { if (/\.\d{3}$/.test(el.value.trim())) warn.push(`${nm}: "${el.value.trim()}" มีทศนิยม 3 ตำแหน่ง (ถ้าหมายถึงหลักพันให้ใช้ลูกน้ำ)`); });
+      const s = values[row.dataset.p] && values[row.dataset.p].s;
+      if (p && p.warnAbove && s > p.warnAbove) warn.push(`${nm}: ยอด ${fmt(s)} สูงกว่าปกติมาก (เกิน 10 เท่าของเป้า)`);
+    });
+    if (warn.length && !confirm('ตรวจตัวเลขอีกครั้ง\n\n' + warn.join('\n') + '\n\nบันทึกตามนี้เลยไหม?')) return;
     $('#entryErr').textContent = '';
     busy($('#saveBtn'), true);
     try {
@@ -720,6 +729,7 @@ function renderExp() {
     ev.preventDefault();
     const fd = new FormData(ev.target), amt = parseNum(fd.get('amt'));
     if (!amt || isNaN(amt) || amt <= 0) { $('#expErr').textContent = 'ใส่จำนวนเงินให้ถูกต้อง'; return; }
+    if (/\.\d{3}$/.test(String(fd.get('amt')).trim()) && !confirm(`"${String(fd.get('amt')).trim()}" มีทศนิยม 3 ตำแหน่ง ถ้าหมายถึงหลักพันให้ใช้ลูกน้ำ\n\nบันทึกตามนี้เลยไหม?`)) return;
     busy($('#expBtn'), true);
     try {
       MD = await api('expenseAdd', {date:fd.get('date'), cat:fd.get('cat'), amt, note:String(fd.get('note') || '').trim(), reqId:newId('x')}); mdSave(MD);
@@ -760,6 +770,7 @@ function renderStaffExp(XD) {
     ev.preventDefault();
     const fd = new FormData(ev.target), amt = parseNum(fd.get('amt'));
     if (!amt || isNaN(amt) || amt <= 0) { $('#expErr').textContent = 'ใส่จำนวนเงินให้ถูกต้อง'; return; }
+    if (/\.\d{3}$/.test(String(fd.get('amt')).trim()) && !confirm(`"${String(fd.get('amt')).trim()}" มีทศนิยม 3 ตำแหน่ง ถ้าหมายถึงหลักพันให้ใช้ลูกน้ำ\n\nบันทึกตามนี้เลยไหม?`)) return;
     busy($('#expBtn'), true);
     try {
       const out = await api('expenseAdd', {date:fd.get('date'), cat:fd.get('cat'), amt, note:String(fd.get('note') || '').trim(), reqId:newId('x')});
