@@ -228,11 +228,16 @@ async function callApi(fn, args) {
   let err = null;
   for (let i = 0; i < 5; i++) {
     if (i) await new Promise(r => setTimeout(r, 300 * i));
-    let res;
-    try { res = await fetch(API_URL, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body, redirect:'follow'}); }
-    catch (e) { err = new Error('เชื่อมต่อไม่ได้ ตรวจสอบอินเทอร์เน็ตแล้วลองใหม่'); continue; }
-    let j;
-    try { j = await res.json(); } catch (e) { err = new Error('ระบบ Google ไม่ตอบ ลองกดใหม่อีกครั้ง'); continue; }
+    // รอคำตอบไม่เกิน 20 วินาที ถ้าค้างให้ตัดแล้วลองใหม่
+    const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 20000);
+    let j = null;
+    try {
+      const res = await fetch(API_URL, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body, redirect:'follow', signal:ctl.signal});
+      try { j = await res.json(); } catch (e) { err = new Error('ระบบ Google ไม่ตอบ ลองกดใหม่อีกครั้ง'); }
+    } catch (e) {
+      err = new Error(e.name === 'AbortError' ? 'ระบบ Google ตอบช้า ลองกดใหม่อีกครั้ง' : 'เชื่อมต่อไม่ได้ ตรวจสอบอินเทอร์เน็ตแล้วลองใหม่');
+    } finally { clearTimeout(timer); }
+    if (!j) continue;
     if (!j.ok) throw new Error(j.error);
     return j.result;
   }
