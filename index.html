@@ -211,6 +211,13 @@ const TOKEN_KEY = 'dailySales.token';
 /* ─────────────────────────── เรียกฝั่ง Google ─────────────────────────── */
 let token = null, me = null, TODAY = null;
 let MD = null;   // ข้อมูลเดือนที่เปิดอยู่ (เจ้าของ)
+let BOOT_ED = null;   // หน้ากรอกยอดที่ได้มาพร้อมการล็อกอิน (พนักงาน) ใช้ครั้งเดียว
+/* จำข้อมูลเดือนล่าสุดไว้ในเครื่องของเจ้าของ เปิดมาเห็นทันที แล้วค่อยอัปเดตตามหลัง (ล้างเมื่อออกจากระบบ) */
+const MD_KEY = 'dailySales.md.';
+function mdSave(m) { try { localStorage.setItem(MD_KEY + m.ym, JSON.stringify(m)); localStorage.setItem(MD_KEY + 'last', m.ym); } catch (e) {} }
+function mdLoad(ym) { try { const s = localStorage.getItem(MD_KEY + (ym || localStorage.getItem(MD_KEY + 'last'))); return s ? JSON.parse(s) : null; } catch (e) { return null; } }
+function mdDrop(ym) { try { localStorage.removeItem(MD_KEY + ym); } catch (e) {} }
+function mdClear() { try { Object.keys(localStorage).filter(k => k.startsWith(MD_KEY)).forEach(k => localStorage.removeItem(k)); } catch (e) {} }
 let view = {page:null};
 /* เปิดผ่าน Google (google.script.run) หรือผ่าน GitHub Pages (ยิง API ไปที่เว็บแอปเดียวกัน) */
 const API_URL = 'https://script.google.com/macros/s/AKfycbzvwgYxWkWOwOZr163wN-lo9iSkvsE_-kCiaYIkX6VE6APNaOJerOUB6gIvRPFhbP9smw/exec';
@@ -317,18 +324,26 @@ function commissionFor(total) {
 
 /* ─────────────────────────── ล็อกอิน ─────────────────────────── */
 async function showLogin() {
-  token = null; me = null; MD = null;
+  token = null; me = null; MD = null; BOOT_ED = null;
   try { sessionStorage.removeItem(TOKEN_KEY); } catch (e) {}
   $('#app').classList.add('hidden'); $('#login').classList.remove('hidden');
   $('#pin').value = ''; $('#loginErr').textContent = '';
+  let last = null, cached = null;
+  try { last = localStorage.getItem(TOKEN_KEY + '.who'); cached = JSON.parse(localStorage.getItem(TOKEN_KEY + '.users') || 'null'); } catch (e) {}
+  const fill = users => {
+    const keep = $('#who').value || last;
+    $('#who').innerHTML = '<option value="">เลือกชื่อของคุณ</option>' + users.map(u => `<option value="${esc(u.id)}" ${u.id === keep ? 'selected' : ''}>${esc(u.name)}</option>`).join('');
+  };
+  // รายชื่อที่จำไว้ขึ้นทันที แล้วค่อยอัปเดตจาก Google
+  if (cached) { fill(cached); ($('#who').value ? $('#pin') : $('#who')).focus(); }
   try {
     const info = await call('appInfo');
     TODAY = info.today;
-    let last = null; try { last = localStorage.getItem(TOKEN_KEY + '.who'); } catch (e) {}
-    $('#who').innerHTML = '<option value="">เลือกชื่อของคุณ</option>' + info.users.map(u => `<option value="${esc(u.id)}" ${u.id === last ? 'selected' : ''}>${esc(u.name)}</option>`).join('');
+    try { localStorage.setItem(TOKEN_KEY + '.users', JSON.stringify(info.users)); } catch (e) {}
+    if (!me) fill(info.users);
     if (!info.users.length) $('#loginErr').textContent = 'ยังไม่มีผู้ใช้ ให้เจ้าของรัน setup ในหน้าแก้โค้ดก่อน';
-    ($('#who').value ? $('#pin') : $('#who')).focus();
-  } catch (e) { $('#loginErr').textContent = e.message; }
+    if (!cached && !me) ($('#who').value ? $('#pin') : $('#who')).focus();
+  } catch (e) { if (!cached) $('#loginErr').textContent = e.message; }
 }
 $('#loginForm').onsubmit = async ev => {
   ev.preventDefault();
@@ -339,18 +354,25 @@ $('#loginForm').onsubmit = async ev => {
   try {
     const r = await call('login', uid, pin);
     try { sessionStorage.setItem(TOKEN_KEY, r.token); localStorage.setItem(TOKEN_KEY + '.who', uid); } catch (e) {}
-    token = r.token; start(r.user);
+    token = r.token; start(r.user, r.boot);
   } catch (e) { $('#loginErr').textContent = e.message; $('#pin').value = ''; $('#pin').focus(); }
   busy($('#loginBtn'), false);
 };
-$('#logout').onclick = () => { if (token) call('logout', token).catch(() => {}); showLogin(); };
+$('#logout').onclick = () => { if (token) call('logout', token).catch(() => {}); mdClear(); showLogin(); };
 
-function start(u) {
+/* boot = ข้อมูลหน้าแรกที่ Google ส่งมาพร้อมการล็อกอิน ไม่ต้องรอโหลดอีกรอบ */
+function start(u, boot) {
   me = u;
   $('#login').classList.add('hidden'); $('#app').classList.remove('hidden');
   $('#whoName').textContent = u.name;
   $('#whoRole').textContent = u.role === 'owner' ? ' · ดูได้ทั้งหมด' : ' · พนักงาน';
-  go(isOwner() ? {page:'dash'} : {page:'entry'});
+  if (isOwner()) {
+    if (boot) { MD = boot; TODAY = boot.today; mdSave(boot); }
+    go({page:'dash', ym:MD ? MD.ym : undefined});
+  } else {
+    if (boot) { BOOT_ED = boot; TODAY = boot.today; }
+    go({page:'entry'});
+  }
 }
 
 /* ─────────────────────────── เมนู + เปลี่ยนหน้า ─────────────────────────── */
@@ -379,22 +401,32 @@ async function go(v) {
     } else if (['dash', 'days', 'day', 'exp'].includes(v.page)) {
       if (v.page === 'day') v.ym = v.date.slice(0, 7);
       if (!v.ym) v.ym = MD ? MD.ym : null;
+      const render = () => ({dash:renderDash, days:renderDays, day:renderDay, exp:renderExp})[v.page]();
       if (!MD || MD.ym !== v.ym || v.reload) {
-        loading();
-        const first = !v.ym;
-        MD = await api('ownerMonth', v.ym || (TODAY || '').slice(0, 7));
-        // เปิดครั้งแรกแล้วเดือนนี้ยังว่าง → ไปเดือนล่าสุดที่มียอด
-        if (first && !Object.keys(MD.sales).some(d => d.startsWith(MD.ym))) {
-          const lastYm = MD.months.find(m => m < MD.ym);
-          if (lastYm) MD = await api('ownerMonth', lastYm);
+        const local = v.reload ? null : mdLoad(v.ym);
+        if (local) {
+          // มีของที่จำไว้ในเครื่อง → แสดงก่อน แล้วอัปเดตจาก Google ตามหลัง
+          MD = local; v.ym = MD.ym; render();
+          api('ownerMonth', v.ym).then(fresh => {
+            mdSave(fresh);
+            if (seq !== goSeq || JSON.stringify(fresh) === JSON.stringify(MD)) return;
+            MD = fresh; TODAY = fresh.today;
+            const typing = document.activeElement && /INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName);
+            if (!typing) render();
+          }).catch(() => {});
+          return;
         }
-        v.ym = MD.ym; TODAY = MD.today;
+        loading();
+        MD = await api('ownerMonth', v.ym || '', !!v.reload);
+        mdSave(MD); v.ym = MD.ym; TODAY = MD.today;
+        if (v.reload) toast('โหลดข้อมูลล่าสุดแล้ว');
       }
       if (seq !== goSeq) return;
-      ({dash:renderDash, days:renderDays, day:renderDay, exp:renderExp})[v.page]();
+      render();
     } else if (v.page === 'entry') {
-      loading();
-      const ED = await api('entryLoad', v.date || TODAY || '');
+      let ED = BOOT_ED && (!v.date || v.date === BOOT_ED.date) ? BOOT_ED : null;
+      BOOT_ED = null;
+      if (!ED) { loading(); ED = await api('entryLoad', v.date || TODAY || ''); }
       if (seq !== goSeq) return;
       TODAY = ED.today; renderEntry(ED);
     } else if (v.page === 'set') {
@@ -649,6 +681,7 @@ function renderEntry(ED) {
       const out = await api('entrySave', d, values);
       toast(`บันทึกยอดวันที่ ${thDate(d)} แล้ว`);
       if (MD && MD.ym === d.slice(0, 7)) MD = null;   // ให้แดชบอร์ดโหลดใหม่
+      mdDrop(d.slice(0, 7)); mdDrop(addDays(d, 1).slice(0, 7));
       if (owner && fromDay) go({page:'day', date:d, ym:d.slice(0, 7)});
       else renderEntry(out);
     } catch (e) { fail(e, $('#entryErr')); busy($('#saveBtn'), false); }
@@ -689,7 +722,7 @@ function renderExp() {
     if (!amt || isNaN(amt) || amt <= 0) { $('#expErr').textContent = 'ใส่จำนวนเงินให้ถูกต้อง'; return; }
     busy($('#expBtn'), true);
     try {
-      MD = await api('expenseAdd', {date:fd.get('date'), cat:fd.get('cat'), amt, note:String(fd.get('note') || '').trim(), reqId:newId('x')});
+      MD = await api('expenseAdd', {date:fd.get('date'), cat:fd.get('cat'), amt, note:String(fd.get('note') || '').trim(), reqId:newId('x')}); mdSave(MD);
       toast('เพิ่มค่าใช้จ่ายแล้ว'); go({page:'exp', ym:MD.ym});
     } catch (e) { fail(e, $('#expErr')); busy($('#expBtn'), false); }
   };
@@ -697,7 +730,7 @@ function renderExp() {
     const e = M.exps.find(x => x.id === b.dataset.del);
     if (!e || !confirm(`ลบ ${C[e.cat]?.name || e.cat} ${fmt(e.amt)} บาท?`)) return;
     busy(b, true);
-    try { MD = await api('expenseDelete', e.id, ym); toast('ลบแล้ว'); go({page:'exp', ym}); }
+    try { MD = await api('expenseDelete', e.id, ym); mdSave(MD); toast('ลบแล้ว'); go({page:'exp', ym}); }
     catch (err) { fail(err); busy(b, false); }
   });
 }
@@ -784,7 +817,7 @@ function renderSet(SD) {
       id:tr.dataset.p, name:tr.querySelector('[name=name]').value.trim(),
       target:parseNum(tr.querySelector('[name=target]').value) || 0, active:tr.querySelector('[name=active]').checked}));
     busy(ev.target, true);
-    try { const sd = await api('settingsSavePlatforms', platforms); MD = null; toast('บันทึกแพลตฟอร์มแล้ว'); renderSet(sd); }
+    try { const sd = await api('settingsSavePlatforms', platforms); MD = null; mdClear(); toast('บันทึกแพลตฟอร์มแล้ว'); renderSet(sd); }
     catch (e) { fail(e, $('#pErr')); busy(ev.target, false); }
   };
   $('#uTbl').onclick = ev => { const b = ev.target.closest('[data-delu]'); if (b) b.closest('tr').remove(); };
@@ -811,7 +844,7 @@ function renderSet(SD) {
 (async () => {
   let t = null; try { t = sessionStorage.getItem(TOKEN_KEY); } catch (e) {}
   if (t) {
-    try { const r = await call('whoami', t); token = t; TODAY = r.today; return start(r.user); } catch (e) {}
+    try { const r = await call('whoami', t); token = t; TODAY = r.today; return start(r.user, r.boot); } catch (e) {}
   }
   showLogin();
 })();
