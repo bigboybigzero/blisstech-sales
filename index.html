@@ -228,27 +228,44 @@ function call(fn, ...args) {
     .withFailureHandler(e => rej(new Error(e && e.message || String(e))))[fn](...args));
   return callApi(fn, args);
 }
-/* Google ส่งคำตอบกลับพลาดเป็นบางครั้ง (หน้า "ไม่สามารถเปิดไฟล์ได้") → ลองใหม่อัตโนมัติ
+/* Google ตอบช้าหรือพลาดเป็นบางครั้ง (บางทีเกิน 20 วิ หรือขึ้น "ไม่สามารถเปิดไฟล์ได้")
+   → ถ้า 3.5 วิแล้วยังไม่ได้คำตอบ ส่งคำขอเดิมซ้ำคู่ขนาน ใช้คำตอบที่มาก่อน (สูงสุด 5 คำขอ)
    ทุกคำสั่งฝั่ง Google ทำซ้ำได้โดยไม่บันทึกซ้ำ */
-async function callApi(fn, args) {
+function callApi(fn, args) {
   const body = JSON.stringify({fn, args});
-  let err = null;
-  for (let i = 0; i < 5; i++) {
-    if (i) await new Promise(r => setTimeout(r, 300 * i));
-    // รอคำตอบไม่เกิน 20 วินาที ถ้าค้างให้ตัดแล้วลองใหม่
-    const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 20000);
-    let j = null;
-    try {
-      const res = await fetch(API_URL, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body, redirect:'follow', signal:ctl.signal});
-      try { j = await res.json(); } catch (e) { err = new Error('ระบบ Google ไม่ตอบ ลองกดใหม่อีกครั้ง'); }
-    } catch (e) {
-      err = new Error(e.name === 'AbortError' ? 'ระบบ Google ตอบช้า ลองกดใหม่อีกครั้ง' : 'เชื่อมต่อไม่ได้ ตรวจสอบอินเทอร์เน็ตแล้วลองใหม่');
-    } finally { clearTimeout(timer); }
-    if (!j) continue;
-    if (!j.ok) throw new Error(j.error);
-    return j.result;
-  }
-  throw err;
+  const MAX = 5, HEDGE_MS = 3500, PER_TRY_MS = 25000;
+  return new Promise((resolve, reject) => {
+    let done = false, launched = 0, active = 0, lastErr = null, hedge = null;
+    const ctrls = [];
+    const finish = (ok, v) => {
+      if (done) return;
+      done = true; clearTimeout(hedge);
+      ctrls.forEach(c => { try { c.abort(); } catch (e) {} });
+      ok ? resolve(v) : reject(v);
+    };
+    const launch = () => {
+      if (done || launched >= MAX) return;
+      launched++; active++;
+      const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), PER_TRY_MS);
+      ctrls.push(ctl);
+      fetch(API_URL, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body, redirect:'follow', signal:ctl.signal})
+        .then(r => r.json())
+        .then(j => j.ok ? finish(true, j.result) : finish(false, new Error(j.error)))
+        .catch(e => {
+          lastErr = new Error(e.name === 'AbortError' ? 'ระบบ Google ตอบช้า ลองกดใหม่อีกครั้ง'
+            : e instanceof SyntaxError ? 'ระบบ Google ไม่ตอบ ลองกดใหม่อีกครั้ง' : 'เชื่อมต่อไม่ได้ ตรวจสอบอินเทอร์เน็ตแล้วลองใหม่');
+        })
+        .finally(() => {
+          clearTimeout(timer); active--;
+          if (done) return;
+          if (launched < MAX) launch();              // คำขอนี้พลาด → ส่งใหม่ทันที
+          else if (!active) finish(false, lastErr);  // ครบทุกคำขอแล้วยังไม่ได้
+        });
+      clearTimeout(hedge);
+      hedge = setTimeout(launch, HEDGE_MS);          // ยังเงียบ → ส่งคู่ขนานอีกคำขอ
+    };
+    launch();
+  });
 }
 const newId = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 /* เรียกแบบต้องล็อกอิน: token หมดอายุ → กลับหน้าล็อกอิน */
@@ -352,7 +369,7 @@ $('#loginForm').onsubmit = async ev => {
   if (!pin) { $('#loginErr').textContent = 'ใส่รหัส'; $('#pin').focus(); return; }
   busy($('#loginBtn'), true); $('#loginErr').textContent = '';
   try {
-    const r = await call('login', uid, pin);
+    const r = await call('login', uid, pin, newId('l'));
     try { sessionStorage.setItem(TOKEN_KEY, r.token); localStorage.setItem(TOKEN_KEY + '.who', uid); } catch (e) {}
     token = r.token; start(r.user, r.boot);
   } catch (e) { $('#loginErr').textContent = e.message; $('#pin').value = ''; $('#pin').focus(); }
